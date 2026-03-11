@@ -217,17 +217,21 @@ def _hgnn_forward_doc(args, ese_model, hgnn_model, doc, causal_probs,
                 causal_pairs.append((eid2idx[c1], eid2idx[c2]))
     else:
         # 推理: 用 ESE predicted probs 构建超图
-        causal_pairs = []
+        causal_pairs = set()
         neighbor_probs = {}
         for pf in doc.pair_features:
             k1, k2 = pf.event_key1, pf.event_key2
             if k1 not in eid2idx or k2 not in eid2idx:
                 continue
-            prob = causal_probs.get((doc.doc_id, k1, k2),
-                   causal_probs.get((doc.doc_id, k2, k1), 0.))
+            # 推理阶段保持和训练一致的有向语义：
+            # 只读取 (k1 -> k2) 的概率，不回退到反向 pair。
+            prob = causal_probs.get((doc.doc_id, k1, k2), 0.)
             if prob >= args.causal_threshold:
-                causal_pairs.append((eid2idx[k1], eid2idx[k2]))
-                neighbor_probs[(eid2idx[k1], eid2idx[k2])] = prob
+                u, v = eid2idx[k1], eid2idx[k2]
+                causal_pairs.add((u, v))
+                neighbor_probs[(u, v)] = prob
+
+        causal_pairs = list(causal_pairs)
 
     # ── 要分类的所有 pair ──
     pair_indices, labels = [], []
