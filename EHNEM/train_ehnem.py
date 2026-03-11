@@ -231,7 +231,8 @@ def _hgnn_forward_doc(args, ese_model, hgnn_model, doc, causal_probs,
                 causal_pairs.add((u, v))
                 neighbor_probs[(u, v)] = prob
 
-        causal_pairs = list(causal_pairs)
+        # set 转 list 会导致顺序不稳定，排序后可提升复现性
+        causal_pairs = sorted(causal_pairs)
 
     # ── 要分类的所有 pair ──
     pair_indices, labels = [], []
